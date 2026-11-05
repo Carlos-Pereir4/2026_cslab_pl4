@@ -10,7 +10,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}/secure-coding-api
+  IMAGE_NAME: ghcr.io/carlos-pereir4/2026_cslab_pl4/secure-coding-api
 
 jobs:
   test:
