@@ -1,0 +1,5 @@
+-Model: Gemini 3.1 Pro 
+-Thinking Level: High
+-Interface: Web Chat
+-Date: November-2026
+-Settings: Default
