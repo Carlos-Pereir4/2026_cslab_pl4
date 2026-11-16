@@ -114,6 +114,12 @@ def me():
 
 @app.get("/students/<student_id>/profile")
 def get_profile(student_id):
+    if "user" not in flask.session:
+       return {"error": "unauthenticated"}, 401
+    role = flask.session.get("role")
+    if role != "admin" and (role != "student" or str(flask.session.get("student_id")) != str(student_id)):
+       return {"error": "forbidden"}, 403
+    
     profile = STUDENT_PROFILES.get(int(student_id))
     if profile is None:
         return {"error": "student not found"}, 404
@@ -121,17 +127,53 @@ def get_profile(student_id):
 
 @app.get("/grades/<student_id>")
 def get_grades(student_id):
+    if "user" not in flask.session:
+      return {"error": "unauthenticated"}, 401
+    role = flask.session.get("role")
+    if role != "admin" and (role != "student" or str(flask.session.get("student_id")) != str(student_id)):
+       return {"error": "forbidden"}, 403
+    
     sid = int(student_id)
     rows = [row for row in GRADES if row["student_id"] == sid]
     return flask.jsonify(rows)
 
 @app.post("/grades/update")
 def update_grade():
-    data = flask.request.get_json()
+    # 1. Authentication
+    if "user" not in flask.session:
+        return {"error": "unauthenticated"}, 401
+        
+    # 2. Extract Data
+    data = flask.request.get_json(silent=True)
+    if not data:
+        return {"error": "invalid json"}, 400
+        
+    student_id = data.get("student_id")
+    course_id = data.get("course_id")
+    grade = data.get("grade")
 
-    student_id = data["student_id"]
-    course_id = data["course_id"]
-    grade = data["grade"]
+    # 3. Input Validation: Missing fields
+    if student_id is None or course_id is None or grade is None:
+        return {"error": "missing fields"}, 400
+
+    # 4. Input Validation: Constraints & Types
+    if course_id not in ["SRS", "SSD"]:
+        return {"error": "invalid course"}, 400
+        
+    if student_id not in STUDENT_PROFILES:
+        return {"error": "invalid student"}, 400
+
+    if type(grade) is bool or not isinstance(grade, (int, float)):
+        return {"error": "invalid grade type"}, 400
+        
+    if not (0 <= grade <= 20):
+        return {"error": "invalid grade value"}, 400
+
+    # 5. Authorization
+    role = flask.session.get("role")
+    if role not in ["admin", "professor"] or (role == "professor" and course_id not in flask.session.get("courses", [])):
+        return {"error": "forbidden"}, 403
+
 
     row = find_grade(student_id, course_id)
     if row is None:
